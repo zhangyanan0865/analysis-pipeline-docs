@@ -82,8 +82,8 @@ h3{font-size:15px;font-weight:500;margin-bottom:8px;margin-top:4px;}
   <div class="nav-section">
     <div class="nav-section-label">各链文档</div>
     <a class="nav-link" href="chain-extracted.html"><span class="dot" style="background:#6d28d9"></span>提取链</a>
-    <a class="nav-link active" href="chain-interpolation.html"><span class="dot" style="background:#0f766e"></span>插值链</a>
     <a class="nav-link" href="chain-load.html"><span class="dot" style="background:#b45309"></span>Load 链</a>
+    <a class="nav-link active" href="chain-interpolation.html"><span class="dot" style="background:#0f766e"></span>插值链</a>
     <a class="nav-link" href="chain-k.html"><span class="dot" style="background:#2563eb"></span>K 链</a>
   </div>
 </nav>
@@ -97,6 +97,11 @@ h3{font-size:15px;font-weight:500;margin-bottom:8px;margin-top:4px;}
 
   <section>
     <div class="section-label">这条链做什么</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--accent-light);color:var(--accent);">whole 全局提取</span>
+      <span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--accent-light);color:var(--accent);">end 局部提取</span>
+    </div>
+    <p>本链同时适用于全局 <code>whole</code> 提取和局部 <code>end</code> 提取，二者共用同一套流程与规则。</p>
     <p>接收提取层的原始 stress 曲线，经过清洗、目标载荷邻近帧选择、帧间插值、平滑四个步骤，生成下游 K 链消费所需的标准 smooth 数据。</p>
     <p>本链覆盖 <code>analysis/stress</code> 和 <code>analysis/interpolation</code> 两段输出，其中 clean 脚本物理位置在 <code>scripts/analysis/stress/</code>，但职责上属于本链上游准备阶段。</p>
   </section>
@@ -240,6 +245,26 @@ h3{font-size:15px;font-weight:500;margin-bottom:8px;margin-top:4px;}
         <div style="font-size:12px;color:var(--accent);margin-top:6px;">K 链默认读取 smooth 层</div>
       </div>
     </div>
+  </section>
+
+  <section>
+    <div class="section-label">执行前提（已冻结）</div>
+    <p>以下规则适用于 <code>end</code> 与 <code>whole</code> 两类 scope，二者共用同一套 stress → clean → interpolation → smooth 流程，在 <code>prepare_interpolation_cases.py</code> 阶段遵循同一对象发现规则：</p>
+    <div style="background:var(--bg-2);border:1px solid var(--border-2);border-radius:10px;padding:18px 20px;margin-top:12px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">1</div>
+        <div style="font-size:14px;color:var(--text-2);">插值准备<strong>不会</strong>从配置中直接声明新的 stress 对象，只会对当前已能在 <code>extracted/stress/&lt;case&gt;/...</code> 目录下扫描到的对象执行目标载荷匹配、缺帧补提、cleaned 补齐及后续插值。</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">2</div>
+        <div style="font-size:14px;color:var(--text-2);">任一 case 在进入 <code>end</code> 或 <code>whole</code> 插值流程之前，目标对象必须至少已完成过一次 stress 提取，使对应对象目录已在 <code>extracted/stress/&lt;case&gt;/local_end/...</code> 或 <code>extracted/stress/&lt;case&gt;/whole/...</code> 下出现。</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">3</div>
+        <div style="font-size:14px;color:var(--text-2);">对象目录一旦出现，后续流程即可对该对象持续进行缺失补全，无需重新声明。</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:12px;">实际含义：<strong>先跑提取，再跑插值。</strong> 如果某个对象在 extracted/stress 下还不存在，插值阶段不会报错创建它，而是直接跳过。</div>
   </section>
 
   <section style="margin-bottom:0;">
