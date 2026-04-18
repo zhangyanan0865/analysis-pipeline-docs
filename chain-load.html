@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Load 链 — Analysis Pipeline</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#ffffff;--bg-2:#f8f9fa;--bg-3:#f1f3f5;--text:#1a1a2e;--text-2:#495057;--text-3:#868e96;--border:rgba(0,0,0,0.08);--border-2:rgba(0,0,0,0.14);--blue:#2563eb;--blue-light:#eff6ff;--teal:#0f766e;--teal-light:#f0fdfa;--purple:#6d28d9;--purple-light:#f5f3ff;--amber:#b45309;--amber-light:#fffbeb;--code-bg:#f1f3f5;--code-text:#334155;--nav-w:200px;--accent:#b45309;--accent-light:#fffbeb;}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--bg-2:#1f2937;--bg-3:#374151;--text:#f9fafb;--text-2:#d1d5db;--text-3:#9ca3af;--border:rgba(255,255,255,0.08);--border-2:rgba(255,255,255,0.14);--blue:#60a5fa;--blue-light:#1e3a5f;--teal:#2dd4bf;--teal-light:#0f2c2a;--purple:#a78bfa;--purple-light:#2e1065;--amber:#fbbf24;--amber-light:#2d1f00;--code-bg:#1f2937;--code-text:#d1d5db;--accent:#fbbf24;--accent-light:#2d1f00;}}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.7;color:var(--text);background:var(--bg);display:flex;min-height:100vh;}
+nav{width:var(--nav-w);flex-shrink:0;background:var(--bg-2);border-right:1px solid var(--border);padding:32px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.nav-logo{padding:0 20px 24px;font-size:13px;font-weight:600;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.nav-section{padding:0 12px;margin-bottom:8px;}
+.nav-section-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);padding:6px 8px 4px;}
+.nav-link{display:block;padding:7px 10px;font-size:13.5px;color:var(--text-2);text-decoration:none;border-radius:6px;}
+.nav-link:hover{background:var(--bg-3);color:var(--text);}
+.nav-link.active{background:var(--accent-light);color:var(--accent);font-weight:500;}
+.nav-link .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+main{flex:1;min-width:0;padding:48px 52px 96px;max-width:860px;}
+.page-header{margin-bottom:48px;}
+.chain-badge-lg{display:inline-block;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:5px;margin-bottom:10px;background:var(--accent-light);color:var(--accent);}
+.page-title{font-size:26px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px;}
+.page-sub{font-size:14px;color:var(--text-3);}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0 0;}
+section{margin-bottom:52px;}
+.section-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px;}
+p{color:var(--text-2);margin-bottom:10px;}p:last-child{margin-bottom:0;}
+code{font-family:"Consolas","Menlo",monospace;font-size:13px;background:var(--code-bg);padding:1px 5px;border-radius:4px;color:var(--code-text);}
+pre{background:var(--code-bg);color:var(--code-text);font-family:"Consolas","Menlo",monospace;font-size:12.5px;line-height:1.6;padding:16px 20px;border-radius:8px;overflow-x:auto;border:1px solid var(--border);margin:8px 0;}
+.note{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:var(--text-2);margin-top:12px;}
+.tip{background:var(--teal-light);border-left:3px solid var(--teal);border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:var(--text-2);margin-top:12px;}
+.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;}
+.io-box{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.io-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);margin-bottom:10px;}
+.io-path{font-family:monospace;font-size:12.5px;color:var(--text-2);display:block;margin-bottom:4px;}
+.solo-card{border:1px solid var(--accent);border-radius:12px;padding:20px 24px;background:var(--accent-light);margin-top:8px;}
+.solo-title{font-size:16px;font-weight:500;margin-bottom:6px;}
+.solo-meta{font-family:monospace;font-size:13px;color:var(--accent);margin-bottom:8px;}
+.solo-desc{font-size:14px;color:var(--text-2);}
+.output-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.output-item:last-child{border-bottom:none;}
+.output-name{font-family:monospace;font-size:13px;flex:1;}
+.output-desc{font-size:13px;color:var(--text-3);}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Analysis Pipeline</div>
+  <div class="nav-section">
+    <div class="nav-section-label">总览</div>
+    <a class="nav-link" href="index.html"><span class="dot" style="background:#2563eb"></span>主链总览</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">各链文档</div>
+    <a class="nav-link" href="chain-extracted.html"><span class="dot" style="background:#6d28d9"></span>提取链</a>
+    <a class="nav-link" href="chain-interpolation.html"><span class="dot" style="background:#0f766e"></span>插值链</a>
+    <a class="nav-link active" href="chain-load.html"><span class="dot" style="background:#b45309"></span>Load 链</a>
+    <a class="nav-link" href="chain-k.html"><span class="dot" style="background:#2563eb"></span>K 链</a>
+  </div>
+</nav>
+<main>
+  <header class="page-header">
+    <div class="chain-badge-lg">Load 链</div>
+    <div class="page-title">Load Chain</div>
+    <div class="page-sub">UF 曲线 slope / slope_change 计算 · 提取层后的并列下游</div>
+    <hr class="divider">
+  </header>
+
+  <section>
+    <div class="section-label">这条链做什么</div>
+    <p>直接读取提取层的标准 UF 曲线，计算 slope 和 slope_change，输出 features 结果。</p>
+    <p>本链是提取层之后的并列下游之一，<strong>不依赖插值链</strong>，提取完成后随时可跑。</p>
+    <div class="tip">跑完 <code>extract_load_from_odb.py</code> 之后，这条链就可以独立执行，无需等待插值链完成。</div>
+  </section>
+
+  <section>
+    <div class="section-label">脚本</div>
+    <div class="solo-card">
+      <div class="solo-title">load_slope_change_analysis.py</div>
+      <div class="solo-meta">scripts/analysis/load/load_slope_change_analysis.py</div>
+      <div class="solo-desc">扫描 <code>extracted/load/</code> 下的各 case，读取 UF 曲线，计算 slope 和 slope_change，结果写入 <code>analysis/load/&lt;case&gt;/features/</code>。</div>
+    </div>
+    <pre style="margin-top:16px;">python scripts/analysis/load/load_slope_change_analysis.py</pre>
+  </section>
+
+  <section>
+    <div class="section-label">输入 / 输出</div>
+    <div class="io-grid">
+      <div class="io-box">
+        <div class="io-label">上游输入</div>
+        <span class="io-path">extracted/load/&lt;case&gt;/&lt;case&gt;_UF_curve.csv</span>
+        <div style="font-size:13px;color:var(--text-3);margin-top:6px;">唯一正式输入，不依赖 analysis/interpolation</div>
+      </div>
+      <div class="io-box">
+        <div class="io-label">下游输出</div>
+        <span class="io-path">analysis/load/&lt;case&gt;/features/&lt;case&gt;_UF_with_slope_change.csv</span>
+        <span class="io-path">analysis/load/logs/*.txt</span>
+      </div>
+    </div>
+    <div class="note">不允许将旧目录中的中间结果作为正式输入。唯一正式输入是 <code>extracted/load/</code> 下的标准 UF 曲线。</div>
+  </section>
+
+  <section style="margin-bottom:0;">
+    <div class="section-label">职责边界</div>
+    <p>本链负责：标准 UF 曲线读取、slope / slope_change 计算、结果落盘、日志记录。</p>
+    <p><strong>不负责</strong>：ODB 提取、stress 处理、interpolation、plotting 展示扩展、K 链计算。</p>
+  </section>
+</main>
+</body>
+</html>

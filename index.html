@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analysis Pipeline — 总览</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #ffffff; --bg-2: #f8f9fa; --bg-3: #f1f3f5;
+  --text: #1a1a2e; --text-2: #495057; --text-3: #868e96;
+  --border: rgba(0,0,0,0.08); --border-2: rgba(0,0,0,0.14);
+  --blue: #2563eb; --blue-light: #eff6ff;
+  --teal: #0f766e; --teal-light: #f0fdfa;
+  --green: #166534; --green-light: #f0fdf4;
+  --purple: #6d28d9; --purple-light: #f5f3ff;
+  --amber: #b45309; --amber-light: #fffbeb;
+  --red: #be123c; --red-light: #fff1f2;
+  --code-bg: #f1f3f5; --code-text: #334155;
+  --nav-w: 200px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827; --bg-2: #1f2937; --bg-3: #374151;
+    --text: #f9fafb; --text-2: #d1d5db; --text-3: #9ca3af;
+    --border: rgba(255,255,255,0.08); --border-2: rgba(255,255,255,0.14);
+    --blue: #60a5fa; --blue-light: #1e3a5f;
+    --teal: #2dd4bf; --teal-light: #0f2c2a;
+    --green: #4ade80; --green-light: #052e16;
+    --purple: #a78bfa; --purple-light: #2e1065;
+    --amber: #fbbf24; --amber-light: #2d1f00;
+    --red: #fb7185; --red-light: #4c0519;
+    --code-bg: #1f2937; --code-text: #d1d5db;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px; line-height: 1.7;
+  color: var(--text); background: var(--bg);
+  display: flex; min-height: 100vh;
+}
+
+/* ── nav ── */
+nav {
+  width: var(--nav-w); flex-shrink: 0;
+  background: var(--bg-2);
+  border-right: 1px solid var(--border);
+  padding: 32px 0;
+  position: sticky; top: 0; height: 100vh;
+  overflow-y: auto;
+}
+.nav-logo {
+  padding: 0 20px 24px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.nav-section { padding: 0 12px; margin-bottom: 8px; }
+.nav-section-label {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-3); padding: 6px 8px 4px;
+}
+.nav-link {
+  display: block; padding: 7px 10px;
+  font-size: 13.5px; color: var(--text-2);
+  text-decoration: none; border-radius: 6px;
+  transition: background 0.1s;
+}
+.nav-link:hover { background: var(--bg-3); color: var(--text); }
+.nav-link.active { background: var(--blue-light); color: var(--blue); font-weight: 500; }
+.nav-link .dot {
+  display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; margin-right: 8px; vertical-align: middle;
+}
+
+/* ── main ── */
+main {
+  flex: 1; min-width: 0;
+  padding: 48px 52px 96px;
+  max-width: 860px;
+}
+
+.page-header { margin-bottom: 52px; }
+.page-title { font-size: 26px; font-weight: 600; letter-spacing: -0.4px; margin-bottom: 6px; }
+.page-sub { font-size: 14px; color: var(--text-3); }
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0 0; }
+
+section { margin-bottom: 56px; }
+.section-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 16px;
+}
+p { color: var(--text-2); margin-bottom: 10px; }
+p:last-child { margin-bottom: 0; }
+code {
+  font-family: "Consolas","Menlo",monospace; font-size: 13px;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  color: var(--code-text);
+}
+
+/* ── pipeline diagram ── */
+.pipeline {
+  display: flex; flex-direction: column; gap: 0;
+  margin: 8px 0 0;
+}
+.pipe-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 0;
+  align-items: stretch;
+}
+.pipe-label-col {
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 0;
+}
+.pipe-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 14px 8px 0 0;
+  text-align: right; width: 100%;
+}
+.pipe-arrow-col { display: flex; flex-direction: column; align-items: center; }
+.pipe-arrow { width: 1px; flex: 1; min-height: 12px; background: var(--border-2); }
+.pipe-arrow-head {
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--border-2);
+}
+
+.pipe-content-col { padding: 8px 0 8px 20px; }
+
+.pipe-node {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 6px;
+  cursor: default;
+}
+.pipe-node:last-child { margin-bottom: 0; }
+.pipe-node-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.pipe-node-name { font-size: 13.5px; font-weight: 500; flex: 1; }
+.pipe-node-sub { font-size: 12px; color: var(--text-3); }
+.pipe-node-link {
+  font-size: 12px; color: var(--blue); text-decoration: none;
+  padding: 3px 8px; border-radius: 4px;
+  background: var(--blue-light); white-space: nowrap;
+}
+.pipe-node-link:hover { opacity: 0.8; }
+
+.fork-label {
+  font-size: 11px; color: var(--text-3);
+  padding: 4px 0 6px 0; display: flex; align-items: center; gap: 8px;
+}
+.fork-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── chain cards ── */
+.chain-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.chain-card {
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.chain-card:hover { border-color: var(--blue); }
+.chain-card-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.chain-badge {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
+}
+.chain-card-title { font-size: 15px; font-weight: 500; }
+.chain-card-desc { font-size: 13px; color: var(--text-3); margin-bottom: 12px; }
+.chain-card-scripts { font-size: 12px; color: var(--text-3); }
+.chain-card-scripts code { font-size: 11.5px; display: block; margin-bottom: 2px; }
+.chain-status {
+  display: inline-block; font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 4px; margin-top: 10px;
+}
+.status-done { background: var(--green-light); color: var(--green); }
+.status-partial { background: var(--amber-light); color: var(--amber); }
+
+/* ── backlog summary ── */
+.backlog-list { display: flex; flex-direction: column; gap: 8px; }
+.backlog-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  font-size: 14px;
+}
+.p-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 7px;
+  border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+}
+.p1 { background: var(--red-light); color: var(--red); }
+.p2 { background: var(--amber-light); color: var(--amber); }
+.backlog-name { font-weight: 500; margin-bottom: 2px; }
+.backlog-sub { font-size: 13px; color: var(--text-3); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Analysis Pipeline</div>
+  <div class="nav-section">
+    <div class="nav-section-label">总览</div>
+    <a class="nav-link active" href="index.html">
+      <span class="dot" style="background:#2563eb"></span>主链总览
+    </a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">各链文档</div>
+    <a class="nav-link" href="chain-extracted.html">
+      <span class="dot" style="background:#6d28d9"></span>提取链
+    </a>
+    <a class="nav-link" href="chain-interpolation.html">
+      <span class="dot" style="background:#0f766e"></span>插值链
+    </a>
+    <a class="nav-link" href="chain-load.html">
+      <span class="dot" style="background:#b45309"></span>Load 链
+    </a>
+    <a class="nav-link" href="chain-k.html">
+      <span class="dot" style="background:#2563eb"></span>K 链
+    </a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">项目治理</div>
+    <a class="nav-link" href="#backlog">未完成项</a>
+  </div>
+</nav>
+
+<main>
+  <header class="page-header">
+    <div class="page-title">Analysis Pipeline</div>
+    <div class="page-sub">E:\Analysis_dat — 正式主链总览</div>
+    <hr class="divider">
+  </header>
+
+  <!-- ── 主链流向 ── -->
+  <section>
+    <div class="section-label">正式主链</div>
+    <p>当前完整主链定义：<code>ODB → extracted → analysis/stress → analysis/interpolation → analysis/load / analysis/k</code></p>
+
+    <div style="margin-top: 24px;" class="pipeline">
+
+      <!-- ODB -->
+      <div class="pipe-row">
+        <div class="pipe-label-col">
+          <div class="pipe-label">上游源</div>
+        </div>
+        <div class="pipe-content-col">
+          <div class="pipe-node">
+            <div class="pipe-node-dot" style="background:#6d28d9"></div>
+            <div>
+              <div class="pipe-node-name">simulation/run/jobs/*.odb</div>
+              <div class="pipe-node-sub">Abaqus 仿真输出，主链唯一上游源</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- arrow -->
+      <div class="pipe-row">
+        <div></div>
+        <div class="pipe-content-col" style="padding-top:0;padding-bottom:0;">
+          <div style="display:flex;flex-direction:column;align-items:flex-start;padding-left:20px;">
+            <div style="width:1px;height:16px;background:var(--border-2);margin-left:3px;"></div>
+            <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--border-2);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- extracted -->
+      <div class="pipe-row">
+        <div class="pipe-label-col">
+          <div class="pipe-label" style="color:var(--purple);">提取层</div>
+        </div>
+        <div class="pipe-content-col">
+          <div class="pipe-node" style="border-color:var(--purple);background:var(--purple-light);">
+            <div class="pipe-node-dot" style="background:#6d28d9"></div>
+            <div style="flex:1;">
+              <div class="pipe-node-name">extracted/load &nbsp;+&nbsp; extracted/stress</div>
+              <div class="pipe-node-sub">extract_load_from_odb.py &nbsp;/&nbsp; extract_stress_from_odb.py</div>
+            </div>
+            <a class="pipe-node-link" href="chain-extracted.html">文档 →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- arrow + fork label -->
+      <div class="pipe-row">
+        <div></div>
+        <div class="pipe-content-col" style="padding-top:0;padding-bottom:0;">
+          <div style="display:flex;flex-direction:column;align-items:flex-start;padding-left:20px;">
+            <div style="width:1px;height:16px;background:var(--border-2);margin-left:3px;"></div>
+            <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--border-2);"></div>
+          </div>
+          <div class="fork-label" style="margin-top:6px;">提取完成后分叉为两条并列下游</div>
+        </div>
+      </div>
+
+      <!-- two parallel branches -->
+      <div class="pipe-row">
+        <div class="pipe-label-col">
+          <div class="pipe-label" style="color:var(--teal);">分析层</div>
+        </div>
+        <div class="pipe-content-col">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+            <!-- branch A: interpolation -->
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--teal);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;">分支 A</div>
+              <div class="pipe-node" style="border-color:var(--teal);background:var(--teal-light);margin-bottom:8px;">
+                <div class="pipe-node-dot" style="background:var(--teal)"></div>
+                <div style="flex:1;">
+                  <div class="pipe-node-name">analysis/stress</div>
+                  <div class="pipe-node-sub">clean_extracted_stress.py</div>
+                </div>
+              </div>
+              <div style="width:1px;height:12px;background:var(--border-2);margin:0 0 0 19px;"></div>
+              <div class="pipe-node" style="border-color:var(--teal);background:var(--teal-light);">
+                <div class="pipe-node-dot" style="background:var(--teal)"></div>
+                <div style="flex:1;">
+                  <div class="pipe-node-name">analysis/interpolation</div>
+                  <div class="pipe-node-sub">prepare_interpolation_cases.py（编排入口）</div>
+                </div>
+                <a class="pipe-node-link" href="chain-interpolation.html">文档 →</a>
+              </div>
+              <div style="width:1px;height:12px;background:var(--border-2);margin:0 0 0 19px;"></div>
+              <div class="pipe-node" style="border-color:var(--blue);background:var(--blue-light);">
+                <div class="pipe-node-dot" style="background:var(--blue)"></div>
+                <div style="flex:1;">
+                  <div class="pipe-node-name">analysis/k</div>
+                  <div class="pipe-node-sub">K fitting → export → margin / scan</div>
+                </div>
+                <a class="pipe-node-link" href="chain-k.html">文档 →</a>
+              </div>
+            </div>
+
+            <!-- branch B: load -->
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--amber);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;">分支 B</div>
+              <div class="pipe-node" style="border-color:var(--amber);background:var(--amber-light);">
+                <div class="pipe-node-dot" style="background:var(--amber)"></div>
+                <div style="flex:1;">
+                  <div class="pipe-node-name">analysis/load</div>
+                  <div class="pipe-node-sub">load_slope_change_analysis.py<br>直接读 extracted/load，不依赖插值</div>
+                </div>
+                <a class="pipe-node-link" href="chain-load.html">文档 →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 从头开始跑一个新任务 ── -->
+  <section>
+    <div class="section-label">从头开始：执行顺序</div>
+    <p>有了新的 ODB 文件，按以下顺序跑：</p>
+
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:0;">
+
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;">1</div>
+          <div style="width:1px;flex:1;min-height:28px;background:var(--border-2);margin:4px 0;"></div>
+        </div>
+        <div style="padding:4px 0 24px;">
+          <div style="font-size:14px;font-weight:500;margin-bottom:3px;">配置提取范围，跑提取层</div>
+          <div style="font-size:13px;color:var(--text-3);margin-bottom:6px;">在配置表里登记要提取的 case 和 frame，然后跑两个提取脚本</div>
+          <code style="display:block;font-size:12px;background:var(--code-bg);color:var(--code-text);padding:8px 12px;border-radius:6px;font-family:monospace;">python scripts/extracted/extract_load_from_odb.py
+python scripts/extracted/extract_stress_from_odb.py</code>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;">2</div>
+          <div style="width:1px;flex:1;min-height:28px;background:var(--border-2);margin:4px 0;"></div>
+        </div>
+        <div style="padding:4px 0 24px;">
+          <div style="font-size:14px;font-weight:500;margin-bottom:3px;">跑插值主链（自动编排）</div>
+          <div style="font-size:13px;color:var(--text-3);margin-bottom:6px;">在 <code>interpolation_cases.csv</code> 里登记 case 和目标载荷，跑编排入口。它会自动完成 clean → 帧选择 → raw 插值 → smooth 平滑。</div>
+          <code style="display:block;font-size:12px;background:var(--code-bg);color:var(--code-text);padding:8px 12px;border-radius:6px;font-family:monospace;">python scripts/analysis/interpolation/prepare_interpolation_cases.py</code>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;">3</div>
+          <div style="width:1px;flex:1;min-height:28px;background:var(--border-2);margin:4px 0;"></div>
+        </div>
+        <div style="padding:4px 0 24px;">
+          <div style="font-size:14px;font-weight:500;margin-bottom:3px;">跑 load 分析（可与步骤 2 并行）</div>
+          <div style="font-size:13px;color:var(--text-3);margin-bottom:6px;">直接读 extracted/load，不依赖步骤 2，提取完成后随时可跑</div>
+          <code style="display:block;font-size:12px;background:var(--code-bg);color:var(--code-text);padding:8px 12px;border-radius:6px;font-family:monospace;">python scripts/analysis/load/load_slope_change_analysis.py</code>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;">4</div>
+        </div>
+        <div style="padding:4px 0;">
+          <div style="font-size:14px;font-weight:500;margin-bottom:3px;">跑 K 链（步骤 2 完成后）</div>
+          <div style="font-size:13px;color:var(--text-3);margin-bottom:6px;">在 <code>k_tasks.csv</code> 和 <code>k_stage_params.csv</code> 里配置任务，按顺序跑四个脚本</div>
+          <code style="display:block;font-size:12px;background:var(--code-bg);color:var(--code-text);padding:8px 12px;border-radius:6px;font-family:monospace;">python scripts/analysis/k/k_fe_stress_fitting_analysis.py
+python scripts/analysis/k/export_k_tables.py
+python scripts/analysis/k/eval_rstar_and_margin.py    # 按需
+python scripts/analysis/k/rstar_scan.py               # 按需</code>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 各链卡片 ── -->
+  <section>
+    <div class="section-label">各链文档入口</div>
+    <div class="chain-grid">
+
+      <a class="chain-card" href="chain-extracted.html">
+        <div class="chain-card-header">
+          <span class="chain-badge" style="background:var(--purple-light);color:var(--purple);">提取链</span>
+        </div>
+        <div class="chain-card-title">Extracted Chain</div>
+        <div class="chain-card-desc">从 ODB 提取 load 和 stress 原始数据</div>
+        <div class="chain-card-scripts">
+          <code>extract_load_from_odb.py</code>
+          <code>extract_stress_from_odb.py</code>
+        </div>
+        <div><span class="chain-status status-done">已完成</span></div>
+      </a>
+
+      <a class="chain-card" href="chain-interpolation.html">
+        <div class="chain-card-header">
+          <span class="chain-badge" style="background:var(--teal-light);color:var(--teal);">插值链</span>
+        </div>
+        <div class="chain-card-title">Interpolation Chain</div>
+        <div class="chain-card-desc">清洗 → 帧选择 → 插值 → 平滑</div>
+        <div class="chain-card-scripts">
+          <code>prepare_interpolation_cases.py（编排入口）</code>
+          <code>clean / interpolate / smooth（分段入口）</code>
+        </div>
+        <div><span class="chain-status status-done">已完成</span></div>
+      </a>
+
+      <a class="chain-card" href="chain-load.html">
+        <div class="chain-card-header">
+          <span class="chain-badge" style="background:var(--amber-light);color:var(--amber);">Load 链</span>
+        </div>
+        <div class="chain-card-title">Load Chain</div>
+        <div class="chain-card-desc">基于 UF 曲线计算 slope / slope_change</div>
+        <div class="chain-card-scripts">
+          <code>load_slope_change_analysis.py</code>
+        </div>
+        <div><span class="chain-status status-done">已完成</span></div>
+      </a>
+
+      <a class="chain-card" href="chain-k.html">
+        <div class="chain-card-header">
+          <span class="chain-badge" style="background:var(--blue-light);color:var(--blue);">K 链</span>
+        </div>
+        <div class="chain-card-title">K Chain</div>
+        <div class="chain-card-desc">K fitting → export → margin / scan</div>
+        <div class="chain-card-scripts">
+          <code>k_fe_stress_fitting_analysis.py</code>
+          <code>export_k_tables.py / eval / scan</code>
+        </div>
+        <div><span class="chain-status status-partial">核心完成，展示层待补</span></div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ── backlog ── -->
+  <section id="backlog">
+    <div class="section-label">未完成项（Backlog）</div>
+    <div class="backlog-list">
+
+      <div class="backlog-item">
+        <span class="p-badge p1">P1</span>
+        <div>
+          <div class="backlog-name">K 展示层恢复</div>
+          <div class="backlog-sub">明确是否需要 table1_* / table2_* 等展示产物，并在新结构下生成</div>
+        </div>
+      </div>
+
+      <div class="backlog-item">
+        <span class="p-badge p1">P1</span>
+        <div>
+          <div class="backlog-name">K 批量验证覆盖</div>
+          <div class="backlog-sub">当前只有单任务样例，需覆盖多 task、多 group、多 who 的批量验行</div>
+        </div>
+      </div>
+
+      <div class="backlog-item">
+        <span class="p-badge p1">P1</span>
+        <div>
+          <div class="backlog-name">文档体系收口</div>
+          <div class="backlog-sub">建立正式总纲、backlog、各链 README，历史证据与现行指导彻底分层</div>
+        </div>
+      </div>
+
+      <div class="backlog-item">
+        <span class="p-badge p2">P2</span>
+        <div>
+          <div class="backlog-name">legacy stress plotting 链迁移</div>
+          <div class="backlog-sub">明确旧 plotting 链真实输入层，决定迁移还是归档</div>
+        </div>
+      </div>
+
+      <div class="backlog-item">
+        <span class="p-badge p2">P2</span>
+        <div>
+          <div class="backlog-name">adhesive wholeline 旧链处理</div>
+          <div class="backlog-sub">明确是否保留，若保留则定义新入口与新输入层</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

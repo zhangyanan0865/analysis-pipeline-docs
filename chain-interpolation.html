@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>插值链 — Analysis Pipeline</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#ffffff;--bg-2:#f8f9fa;--bg-3:#f1f3f5;--text:#1a1a2e;--text-2:#495057;--text-3:#868e96;--border:rgba(0,0,0,0.08);--border-2:rgba(0,0,0,0.14);--blue:#2563eb;--blue-light:#eff6ff;--teal:#0f766e;--teal-light:#f0fdfa;--purple:#6d28d9;--purple-light:#f5f3ff;--amber:#b45309;--amber-light:#fffbeb;--green:#166534;--green-light:#f0fdf4;--code-bg:#f1f3f5;--code-text:#334155;--nav-w:200px;--accent:#0f766e;--accent-light:#f0fdfa;}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--bg-2:#1f2937;--bg-3:#374151;--text:#f9fafb;--text-2:#d1d5db;--text-3:#9ca3af;--border:rgba(255,255,255,0.08);--border-2:rgba(255,255,255,0.14);--blue:#60a5fa;--blue-light:#1e3a5f;--teal:#2dd4bf;--teal-light:#0f2c2a;--purple:#a78bfa;--purple-light:#2e1065;--amber:#fbbf24;--amber-light:#2d1f00;--green:#4ade80;--green-light:#052e16;--code-bg:#1f2937;--code-text:#d1d5db;--accent:#2dd4bf;--accent-light:#0f2c2a;}}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.7;color:var(--text);background:var(--bg);display:flex;min-height:100vh;}
+nav{width:var(--nav-w);flex-shrink:0;background:var(--bg-2);border-right:1px solid var(--border);padding:32px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.nav-logo{padding:0 20px 24px;font-size:13px;font-weight:600;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.nav-section{padding:0 12px;margin-bottom:8px;}
+.nav-section-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);padding:6px 8px 4px;}
+.nav-link{display:block;padding:7px 10px;font-size:13.5px;color:var(--text-2);text-decoration:none;border-radius:6px;}
+.nav-link:hover{background:var(--bg-3);color:var(--text);}
+.nav-link.active{background:var(--accent-light);color:var(--accent);font-weight:500;}
+.nav-link .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+main{flex:1;min-width:0;padding:48px 52px 96px;max-width:860px;}
+.page-header{margin-bottom:48px;}
+.chain-badge-lg{display:inline-block;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:5px;margin-bottom:10px;background:var(--accent-light);color:var(--accent);}
+.page-title{font-size:26px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px;}
+.page-sub{font-size:14px;color:var(--text-3);}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0 0;}
+section{margin-bottom:52px;}
+.section-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px;}
+p{color:var(--text-2);margin-bottom:10px;}p:last-child{margin-bottom:0;}
+code{font-family:"Consolas","Menlo",monospace;font-size:13px;background:var(--code-bg);padding:1px 5px;border-radius:4px;color:var(--code-text);}
+pre{background:var(--code-bg);color:var(--code-text);font-family:"Consolas","Menlo",monospace;font-size:12.5px;line-height:1.6;padding:16px 20px;border-radius:8px;overflow-x:auto;border:1px solid var(--border);margin:8px 0;}
+h3{font-size:15px;font-weight:500;margin-bottom:8px;margin-top:4px;}
+.note{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:var(--text-2);margin-top:12px;}
+.tip{background:var(--accent-light);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:var(--text-2);margin-top:12px;}
+
+/* entry mode cards */
+.entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;}
+.entry-card{border:1px solid var(--border-2);border-radius:10px;padding:16px 18px;}
+.entry-card.primary{border-color:var(--accent);background:var(--accent-light);}
+.entry-tag{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:2px 7px;border-radius:4px;margin-bottom:8px;display:inline-block;}
+.entry-tag.main{background:var(--accent);color:#fff;}
+.entry-tag.debug{background:var(--bg-3);color:var(--text-3);}
+.entry-title{font-size:14px;font-weight:500;margin-bottom:4px;}
+.entry-desc{font-size:13px;color:var(--text-3);}
+.entry-script{font-family:monospace;font-size:12px;color:var(--accent);margin-top:8px;}
+
+/* flow */
+.flow{display:flex;flex-direction:column;gap:0;margin:8px 0;}
+.flow-step{display:flex;align-items:flex-start;gap:16px;}
+.flow-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:32px;}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+.step-num.auto{background:var(--bg-3);color:var(--text-3);border:1px solid var(--border-2);font-size:10px;}
+.flow-connector{width:1px;flex:1;min-height:20px;background:var(--border-2);margin:0 auto;}
+.flow-connector.dashed{background:repeating-linear-gradient(to bottom,var(--border-2) 0,var(--border-2) 4px,transparent 4px,transparent 8px);}
+.flow-body{flex:1;padding:6px 0 24px;}
+.step-title{font-size:15px;font-weight:500;margin-bottom:3px;}
+.step-meta{font-size:12.5px;color:var(--text-3);font-family:monospace;margin-bottom:6px;}
+.step-desc{font-size:14px;color:var(--text-2);}
+.step-auto{font-size:12px;color:var(--accent);font-style:italic;margin-top:2px;}
+
+/* io */
+.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;}
+.io-box{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.io-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);margin-bottom:10px;}
+.io-path{font-family:monospace;font-size:12.5px;color:var(--text-2);display:block;margin-bottom:4px;}
+
+.field-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.field-table th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);padding:6px 12px;border-bottom:1px solid var(--border);background:var(--bg-2);}
+.field-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text-2);}
+.field-table tr:last-child td{border-bottom:none;}
+.field-name{font-family:monospace;font-size:13px;color:var(--text);font-weight:500;}
+.req{font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:3px;}
+.auto-gen{font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-light);padding:1px 6px;border-radius:3px;}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Analysis Pipeline</div>
+  <div class="nav-section">
+    <div class="nav-section-label">总览</div>
+    <a class="nav-link" href="index.html"><span class="dot" style="background:#2563eb"></span>主链总览</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">各链文档</div>
+    <a class="nav-link" href="chain-extracted.html"><span class="dot" style="background:#6d28d9"></span>提取链</a>
+    <a class="nav-link active" href="chain-interpolation.html"><span class="dot" style="background:#0f766e"></span>插值链</a>
+    <a class="nav-link" href="chain-load.html"><span class="dot" style="background:#b45309"></span>Load 链</a>
+    <a class="nav-link" href="chain-k.html"><span class="dot" style="background:#2563eb"></span>K 链</a>
+  </div>
+</nav>
+<main>
+  <header class="page-header">
+    <div class="chain-badge-lg">插值链</div>
+    <div class="page-title">Interpolation Chain</div>
+    <div class="page-sub">stress 清洗 · 帧选择 · 帧间插值 · 平滑 · 主链第二层</div>
+    <hr class="divider">
+  </header>
+
+  <section>
+    <div class="section-label">这条链做什么</div>
+    <p>接收提取层的原始 stress 曲线，经过清洗、目标载荷邻近帧选择、帧间插值、平滑四个步骤，生成下游 K 链消费所需的标准 smooth 数据。</p>
+    <p>本链覆盖 <code>analysis/stress</code> 和 <code>analysis/interpolation</code> 两段输出，其中 clean 脚本物理位置在 <code>scripts/analysis/stress/</code>，但职责上属于本链上游准备阶段。</p>
+  </section>
+
+  <section>
+    <div class="section-label">入口模式</div>
+    <p>本链有两种使用模式，日常优先用主入口：</p>
+    <div class="entry-grid">
+      <div class="entry-card primary">
+        <div class="entry-tag main">日常主入口</div>
+        <div class="entry-title">prepare_interpolation_cases.py</div>
+        <div class="entry-desc">自动编排器。完成 clean → 帧选择 → raw 插值 → smooth 平滑的完整流程，并会检查并补齐上游缺失的 load / stress / cleaned 数据。</div>
+        <div class="entry-script">scripts/analysis/interpolation/prepare_interpolation_cases.py</div>
+      </div>
+      <div class="entry-card">
+        <div class="entry-tag debug">分段调试入口</div>
+        <div class="entry-title">各段脚本单独跑</div>
+        <div class="entry-desc">只重跑某一段时使用。例如只想重做平滑，单独跑 smooth 脚本即可，不影响其他段。</div>
+        <div class="entry-script">clean / interpolate / smooth（见下方）</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">执行流程</div>
+    <p>跑主入口时，内部按以下顺序执行：</p>
+    <div style="margin-top:16px;" class="flow">
+
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num">1</div>
+          <div class="flow-connector"></div>
+        </div>
+        <div class="flow-body">
+          <div class="step-title">配置 interpolation_cases.csv</div>
+          <div class="step-desc">在配置表里登记要处理的 case 和目标载荷，再跑主入口脚本。</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num auto">自动</div>
+          <div class="flow-connector dashed"></div>
+        </div>
+        <div class="flow-body">
+          <div class="step-title">检查并补齐上游数据</div>
+          <div class="step-meta">prepare_interpolation_cases.py 内部执行</div>
+          <div class="step-desc">检查 <code>extracted/load</code>、<code>extracted/stress</code>、<code>analysis/stress/cleaned</code> 是否存在，缺失时自动补齐。</div>
+          <div class="step-auto">由编排入口自动触发</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num auto">自动</div>
+          <div class="flow-connector dashed"></div>
+        </div>
+        <div class="flow-body">
+          <div class="step-title">生成 generated_load_map.csv</div>
+          <div class="step-meta">prepare_interpolation_cases.py 内部执行</div>
+          <div class="step-desc">基于 UF 曲线选出目标载荷附近的两个相邻帧，生成帧映射表，供插值脚本使用。</div>
+          <div class="step-auto">由编排入口自动生成</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num auto">自动</div>
+          <div class="flow-connector dashed"></div>
+        </div>
+        <div class="flow-body">
+          <div class="step-title">帧间插值（raw）</div>
+          <div class="step-meta">interpolate_cleaned_stress.py</div>
+          <div class="step-desc">在相邻两帧之间按目标载荷线性插值，生成 raw 结果和 raw 图。</div>
+          <div class="step-auto">由编排入口自动触发</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num auto">自动</div>
+        </div>
+        <div class="flow-body">
+          <div class="step-title">平滑（smooth）</div>
+          <div class="step-meta">smooth_interpolated_stress.py</div>
+          <div class="step-desc">对 raw 结果进行平滑，生成 smooth 结果和 smooth 图。<strong>K 链默认消费 smooth 层。</strong></div>
+          <div class="step-auto">由编排入口自动触发</div>
+        </div>
+      </div>
+    </div>
+
+    <pre>python scripts/analysis/interpolation/prepare_interpolation_cases.py</pre>
+
+    <div class="tip">分段调试时可单独跑：<br>
+    <code>clean_extracted_stress.py</code> · <code>interpolate_cleaned_stress.py</code> · <code>smooth_interpolated_stress.py</code></div>
+  </section>
+
+  <section>
+    <div class="section-label">配置表</div>
+    <div style="margin-bottom:20px;">
+      <h3><code>config/analysis/interpolation/interpolation_cases.csv</code> &nbsp;<span style="font-size:12px;color:var(--text-3);font-family:sans-serif;">手动维护</span></h3>
+      <p>定义要处理的 case 和目标载荷。</p>
+      <table class="field-table" style="margin-top:10px;">
+        <thead><tr><th>字段</th><th>说明</th><th style="width:60px;">必填</th></tr></thead>
+        <tbody>
+          <tr><td class="field-name">enabled</td><td>0 = 跳过，1 = 执行</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">case_name</td><td>case 标识，需与提取层一致</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">target_load_N</td><td>目标载荷（N），用于选邻近帧</td><td><span class="req">必填</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3><code>config/analysis/interpolation/generated_load_map.csv</code> &nbsp;<span style="font-size:12px;color:var(--accent);font-family:sans-serif;">自动生成，勿手动编辑</span></h3>
+      <p>由 <code>prepare_interpolation_cases.py</code> 在运行时自动生成，记录每个对象的目标帧对和载荷映射，供插值脚本读取。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">输入 / 输出</div>
+    <div class="io-grid">
+      <div class="io-box">
+        <div class="io-label">上游输入</div>
+        <span class="io-path">extracted/load/&lt;case&gt;/&lt;case&gt;_UF_curve.csv</span>
+        <span class="io-path">extracted/stress/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/Frame_&lt;id&gt;/</span>
+        <span class="io-path">analysis/stress/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/cleaned/Frame_&lt;id&gt;/</span>
+      </div>
+      <div class="io-box">
+        <div class="io-label">Cleaned 输出</div>
+        <span class="io-path">analysis/stress/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/cleaned/Frame_&lt;id&gt;/</span>
+        <span class="io-path">analysis/stress/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/cleaned_plots/Frame_&lt;id&gt;/</span>
+      </div>
+      <div class="io-box">
+        <div class="io-label">Raw 插值输出</div>
+        <span class="io-path">analysis/interpolation/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/raw/Frame_&lt;low&gt;_&lt;high&gt;/</span>
+        <span class="io-path">analysis/interpolation/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/raw_plots/Frame_&lt;low&gt;_&lt;high&gt;/</span>
+      </div>
+      <div class="io-box">
+        <div class="io-label">Smooth 输出（下游消费层）</div>
+        <span class="io-path">analysis/interpolation/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/smooth/Frame_&lt;low&gt;_&lt;high&gt;/</span>
+        <span class="io-path">analysis/interpolation/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/smooth_plots/Frame_&lt;low&gt;_&lt;high&gt;/</span>
+        <div style="font-size:12px;color:var(--accent);margin-top:6px;">K 链默认读取 smooth 层</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="margin-bottom:0;">
+    <div class="section-label">职责边界</div>
+    <p>本链负责：stress cleaned 数据准备、载荷邻近帧选择、帧间插值、平滑结果生成。</p>
+    <p><strong>不负责</strong>：ODB 提取、load slope 计算、K fitting / export / margin / scan、legacy plotting 展示层。</p>
+    <div class="note">K 链当前默认使用 smooth 层。特殊任务可按配置改为使用 raw，但需在 k_tasks.csv 中修改 data_layer 字段。</div>
+  </section>
+</main>
+</body>
+</html>
