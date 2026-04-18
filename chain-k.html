@@ -5,348 +5,88 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K 链 — Analysis Pipeline</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #ffffff;
-    --bg-2: #f8f9fa;
-    --bg-3: #f1f3f5;
-    --text: #1a1a2e;
-    --text-2: #495057;
-    --text-3: #868e96;
-    --border: rgba(0,0,0,0.08);
-    --border-2: rgba(0,0,0,0.14);
-    --blue: #2563eb;
-    --blue-light: #eff6ff;
-    --blue-mid: #bfdbfe;
-    --teal: #0f766e;
-    --teal-light: #f0fdfa;
-    --amber: #b45309;
-    --amber-light: #fffbeb;
-    --code-bg: #f1f3f5;
-    --code-text: #334155;
-    --accent: #2563eb;
-    --step-line: #e2e8f0;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #111827;
-      --bg-2: #1f2937;
-      --bg-3: #374151;
-      --text: #f9fafb;
-      --text-2: #d1d5db;
-      --text-3: #9ca3af;
-      --border: rgba(255,255,255,0.08);
-      --border-2: rgba(255,255,255,0.14);
-      --blue: #60a5fa;
-      --blue-light: #1e3a5f;
-      --blue-mid: #1e40af;
-      --teal: #2dd4bf;
-      --teal-light: #0f2c2a;
-      --amber: #fbbf24;
-      --amber-light: #2d1f00;
-      --code-bg: #1f2937;
-      --code-text: #d1d5db;
-      --step-line: #374151;
-    }
-  }
-
-
-  --nav-w: 200px;
-}
-
-nav {
-  width: 200px; flex-shrink: 0;
-  background: var(--bg-2);
-  border-right: 1px solid var(--border);
-  padding: 32px 0;
-  position: sticky; top: 0; height: 100vh;
-  overflow-y: auto;
-}
-.nav-logo { padding: 0 20px 24px; font-size: 13px; font-weight: 600; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-.nav-section { padding: 0 12px; margin-bottom: 8px; }
-.nav-section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); padding: 6px 8px 4px; }
-.nav-link { display: block; padding: 7px 10px; font-size: 13.5px; color: var(--text-2); text-decoration: none; border-radius: 6px; }
-.nav-link:hover { background: var(--bg-3); color: var(--text); }
-.nav-link.active { background: var(--blue-light); color: var(--blue); font-weight: 500; }
-.nav-link .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
-
-  body {
-    display: flex; min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 15px;
-    line-height: 1.7;
-    color: var(--text);
-    background: var(--bg);
-    padding: 0;
-  }
-
-  /* ── header ── */
-  .page-header { margin-bottom: 52px; }
-  .page-title { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 6px; }
-  .page-sub { font-size: 14px; color: var(--text-3); }
-  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0 0; }
-
-  /* ── sections ── */
-  section { margin-bottom: 56px; }
-  .section-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-3);
-    margin-bottom: 14px;
-  }
-  h2 { font-size: 18px; font-weight: 500; margin-bottom: 12px; }
-  p { color: var(--text-2); margin-bottom: 10px; }
-  p:last-child { margin-bottom: 0; }
-
-  /* ── flow diagram ── */
-  .flow { display: flex; flex-direction: column; gap: 0; margin: 8px 0; }
-  .flow-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    position: relative;
-  }
-  .flow-step + .flow-step { margin-top: 0; }
-  .flow-left {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-    width: 36px;
-  }
-  .step-num {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: var(--blue);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    z-index: 1;
-  }
-  .step-num.optional {
-    background: var(--bg-3);
-    color: var(--text-3);
-    border: 1px solid var(--border-2);
-  }
-  .flow-connector {
-    width: 1px;
-    flex: 1;
-    min-height: 24px;
-    background: var(--step-line);
-    margin: 0 auto;
-  }
-  .flow-connector.fork {
-    background: linear-gradient(var(--step-line), var(--step-line));
-  }
-  .flow-body {
-    flex: 1;
-    padding: 10px 0 28px;
-  }
-  .step-title { font-size: 15px; font-weight: 500; margin-bottom: 3px; }
-  .step-meta { font-size: 13px; color: var(--text-3); margin-bottom: 6px; }
-  .step-desc { font-size: 14px; color: var(--text-2); }
-  .tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-right: 6px;
-    margin-top: 6px;
-  }
-  .tag-blue { background: var(--blue-light); color: var(--blue); }
-  .tag-gray { background: var(--bg-3); color: var(--text-3); }
-
-  .fork-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 8px 0 0 52px;
-  }
-  .fork-card {
-    border: 1px solid var(--border-2);
-    border-radius: 10px;
-    padding: 14px 16px;
-    background: var(--bg-2);
-  }
-  .fork-card-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
-  .fork-card-desc { font-size: 13px; color: var(--text-3); }
-  .fork-card-script { font-size: 12px; color: var(--blue); font-family: monospace; margin-top: 6px; }
-
-  /* ── config tables ── */
-  .config-block { margin-bottom: 32px; }
-  .config-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .config-filename {
-    font-family: monospace;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 4px 10px;
-    background: var(--bg-3);
-    border-radius: 6px;
-    color: var(--text);
-  }
-  .config-desc { font-size: 14px; color: var(--text-2); }
-
-  .field-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  .field-table th {
-    text-align: left;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-3);
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-2);
-  }
-  .field-table td {
-    padding: 9px 12px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-    color: var(--text-2);
-  }
-  .field-table tr:last-child td { border-bottom: none; }
-  .field-name { font-family: monospace; font-size: 13px; color: var(--text); font-weight: 500; }
-  .req { font-size: 11px; font-weight: 600; color: var(--blue); background: var(--blue-light); padding: 1px 6px; border-radius: 3px; }
-  .opt { font-size: 11px; font-weight: 500; color: var(--text-3); background: var(--bg-3); padding: 1px 6px; border-radius: 3px; }
-
-  /* ── code block ── */
-  pre {
-    background: var(--code-bg);
-    color: var(--code-text);
-    font-family: "Consolas", "Menlo", monospace;
-    font-size: 12.5px;
-    line-height: 1.6;
-    padding: 16px 20px;
-    border-radius: 8px;
-    overflow-x: auto;
-    border: 1px solid var(--border);
-    margin: 8px 0;
-  }
-  code { font-family: "Consolas", "Menlo", monospace; font-size: 13px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; color: var(--code-text); }
-
-  /* ── step-by-step ops ── */
-  .ops { display: flex; flex-direction: column; gap: 24px; }
-  .op-card {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .op-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    background: var(--bg-2);
-    border-bottom: 1px solid var(--border);
-  }
-  .op-num {
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    background: var(--blue);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .op-title { font-size: 14px; font-weight: 500; }
-  .op-file { font-family: monospace; font-size: 12px; color: var(--text-3); margin-left: auto; }
-  .op-body { padding: 16px 18px; }
-  .op-body p { font-size: 14px; color: var(--text-2); margin-bottom: 10px; }
-  .note {
-    background: var(--amber-light);
-    border-left: 3px solid var(--amber);
-    border-radius: 0 6px 6px 0;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: var(--text-2);
-    margin-top: 12px;
-  }
-
-  /* ── pitfalls ── */
-  .pitfall-list { display: flex; flex-direction: column; gap: 8px; }
-  .pitfall {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 14px;
-    background: var(--bg-2);
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    font-size: 14px;
-  }
-  .pitfall-icon {
-    font-size: 14px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: #fee2e2;
-    color: #b91c1c;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700;
-  }
-  @media (prefers-color-scheme: dark) {
-    .pitfall-icon { background: #450a0a; color: #fca5a5; }
-  }
-  .pitfall-text { color: var(--text-2); }
-  .pitfall-fix { color: var(--text-3); font-size: 13px; margin-top: 2px; }
-
-  /* ── output table ── */
-  .out-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  .out-table th {
-    text-align: left;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-3);
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-2);
-  }
-  .out-table td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text-2);
-    vertical-align: top;
-  }
-  .out-table tr:last-child td { border-bottom: none; }
-  .out-table .stage-name { font-weight: 500; color: var(--text); font-size: 14px; }
-  .out-path { font-family: monospace; font-size: 12px; color: var(--blue); }
-  .example-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 12px; }
-  .example-table th {
-    text-align: left;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-3);
-    padding: 7px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-3);
-  }
-  .example-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .example-table tr:last-child td { border-bottom: none; }
-  .example-table .val { font-family: monospace; font-size: 13px; color: var(--text); }
-  .val-note { font-family: -apple-system, sans-serif; font-size: 12px; color: var(--text-3); margin-left: 8px; }
-  .group-row { background: var(--bg-2); }
-  .group-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); padding: 6px 12px; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#ffffff;--bg-2:#f8f9fa;--bg-3:#f1f3f5;--text:#1a1a2e;--text-2:#495057;--text-3:#868e96;--border:rgba(0,0,0,0.08);--border-2:rgba(0,0,0,0.14);--blue:#2563eb;--blue-light:#eff6ff;--teal:#0f766e;--teal-light:#f0fdfa;--purple:#6d28d9;--purple-light:#f5f3ff;--amber:#b45309;--amber-light:#fffbeb;--green:#166534;--green-light:#f0fdf4;--code-bg:#f1f3f5;--code-text:#334155;--nav-w:200px;--accent:#2563eb;--accent-light:#eff6ff;}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--bg-2:#1f2937;--bg-3:#374151;--text:#f9fafb;--text-2:#d1d5db;--text-3:#9ca3af;--border:rgba(255,255,255,0.08);--border-2:rgba(255,255,255,0.14);--blue:#60a5fa;--blue-light:#1e3a5f;--teal:#2dd4bf;--teal-light:#0f2c2a;--purple:#a78bfa;--purple-light:#2e1065;--amber:#fbbf24;--amber-light:#2d1f00;--green:#4ade80;--green-light:#052e16;--code-bg:#1f2937;--code-text:#d1d5db;--accent:#60a5fa;--accent-light:#1e3a5f;}}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.7;color:var(--text);background:var(--bg);display:flex;min-height:100vh;}
+nav{width:var(--nav-w);flex-shrink:0;background:var(--bg-2);border-right:1px solid var(--border);padding:32px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.nav-logo{padding:0 20px 24px;font-size:13px;font-weight:600;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.nav-section{padding:0 12px;margin-bottom:8px;}
+.nav-section-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);padding:6px 8px 4px;}
+.nav-link{display:block;padding:7px 10px;font-size:13.5px;color:var(--text-2);text-decoration:none;border-radius:6px;}
+.nav-link:hover{background:var(--bg-3);color:var(--text);}
+.nav-link.active{background:var(--accent-light);color:var(--accent);font-weight:500;}
+.nav-link .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+main{flex:1;min-width:0;padding:48px 52px 96px;max-width:860px;}
+.page-header{margin-bottom:48px;}
+.chain-badge-lg{display:inline-block;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:5px;margin-bottom:10px;background:var(--accent-light);color:var(--accent);}
+.page-title{font-size:26px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px;}
+.page-sub{font-size:14px;color:var(--text-3);}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0 0;}
+section{margin-bottom:52px;}
+.section-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px;}
+p{color:var(--text-2);margin-bottom:10px;}p:last-child{margin-bottom:0;}
+h3{font-size:15px;font-weight:500;margin-bottom:8px;}
+code{font-family:"Consolas","Menlo",monospace;font-size:13px;background:var(--code-bg);padding:1px 5px;border-radius:4px;color:var(--code-text);}
+pre{background:var(--code-bg);color:var(--code-text);font-family:"Consolas","Menlo",monospace;font-size:12.5px;line-height:1.6;padding:16px 20px;border-radius:8px;overflow-x:auto;border:1px solid var(--border);margin:8px 0;}
+.note{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:var(--text-2);margin-top:12px;}
+.flow{display:flex;flex-direction:column;gap:0;margin:8px 0;}
+.flow-step{display:flex;align-items:flex-start;gap:16px;}
+.flow-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:32px;}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+.flow-connector{width:1px;flex:1;min-height:20px;background:var(--border-2);margin:0 auto;}
+.flow-body{flex:1;padding:6px 0 24px;}
+.step-title{font-size:15px;font-weight:500;margin-bottom:3px;}
+.step-meta{font-size:12.5px;color:var(--text-3);font-family:monospace;margin-bottom:6px;}
+.step-desc{font-size:14px;color:var(--text-2);}
+.tag{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;margin-right:6px;margin-top:6px;}
+.tag-blue{background:var(--blue-light);color:var(--blue);}
+.fork-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.fork-card{border:1px solid var(--border-2);border-radius:10px;padding:14px 16px;background:var(--bg-2);}
+.fork-card-title{font-size:14px;font-weight:500;margin-bottom:4px;}
+.fork-card-desc{font-size:13px;color:var(--text-3);}
+.fork-card-script{font-size:12px;color:var(--accent);font-family:monospace;margin-top:6px;}
+.config-block{margin-bottom:28px;}
+.config-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.config-filename{font-family:monospace;font-size:13px;font-weight:600;padding:4px 10px;background:var(--bg-3);border-radius:6px;color:var(--text);}
+.config-desc{font-size:14px;color:var(--text-2);}
+.field-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.field-table th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);padding:6px 12px;border-bottom:1px solid var(--border);background:var(--bg-2);}
+.field-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text-2);}
+.field-table tr:last-child td{border-bottom:none;}
+.field-name{font-family:monospace;font-size:13px;color:var(--text);font-weight:500;}
+.req{font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:3px;}
+.opt{font-size:11px;font-weight:500;color:var(--text-3);background:var(--bg-3);padding:1px 6px;border-radius:3px;}
+.ops{display:flex;flex-direction:column;gap:16px;}
+.op-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.op-header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--bg-2);border-bottom:1px solid var(--border);}
+.op-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.op-title{font-size:14px;font-weight:500;}
+.op-file{font-family:monospace;font-size:12px;color:var(--text-3);margin-left:auto;}
+.op-body{padding:16px 18px;}
+.example-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:12px;}
+.example-table th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--bg-3);}
+.example-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.example-table tr:last-child td{border-bottom:none;}
+.val{font-family:monospace;font-size:13px;color:var(--text);}
+.val-note{font-family:-apple-system,sans-serif;font-size:12px;color:var(--text-3);margin-left:8px;}
+.group-row{background:var(--bg-2);}
+.group-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);padding:6px 12px;}
+.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;}
+.io-box{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.io-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);margin-bottom:10px;}
+.io-path{font-family:monospace;font-size:12.5px;color:var(--text-2);display:block;margin-bottom:4px;}
+.pitfall-list{display:flex;flex-direction:column;gap:8px;}
+.pitfall{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);font-size:14px;}
+.pitfall-icon{width:18px;height:18px;border-radius:50%;background:#fee2e2;color:#b91c1c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:1px;}
+@media(prefers-color-scheme:dark){.pitfall-icon{background:#450a0a;color:#fca5a5;}}
+.pitfall-text{color:var(--text-2);}
+.pitfall-fix{color:var(--text-3);font-size:13px;margin-top:2px;}
+.status-partial{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--amber-light);color:var(--amber);}
 </style>
 </head>
-<body><nav>
+<body>
+<nav>
   <div class="nav-logo">Analysis Pipeline</div>
   <div class="nav-section">
     <div class="nav-section-label">总览</div>
@@ -360,198 +100,184 @@ nav {
     <a class="nav-link active" href="chain-k.html"><span class="dot" style="background:#2563eb"></span>K 链</a>
   </div>
 </nav>
-<main style="flex:1;min-width:0;padding:48px 52px 96px;max-width:860px;">
 
-<header class="page-header">
-  <div style="display:inline-block;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:5px;margin-bottom:10px;background:var(--blue-light);color:var(--blue);">K 链</div><br><div class="page-title">K Chain</div>
-  <div class="page-sub">界面应力 K 拟合 · K 表导出 · r* 评价与扫描</div>
-  <hr class="divider">
-</header>
+<main>
+  <header class="page-header">
+    <div class="chain-badge-lg">K 链</div>
+    <div class="page-title">K Chain</div>
+    <div class="page-sub">界面应力 K 拟合 · K 表导出 · r* 评价与扫描 · 插值链下游</div>
+    <hr class="divider">
+  </header>
 
-<!-- ── 1. 这条链做什么 ── -->
-<section>
-  <div class="section-label">概述</div>
-  <p>从 FEM 插值后的界面应力曲线出发，对 S12 和 S22 分别做 K 拟合，将拟合结果导出为标准 K 表，然后在指定的 r* 点做点评价（margin）或系统扫描（scan）。</p>
-  <p>前置条件：上游插值已完成，<code>analysis/interpolation/...</code> 下的 CSV 已就绪。</p>
-</section>
+  <section>
+    <div class="section-label">这条链做什么</div>
+    <p>从 FEM 插值后的界面应力曲线出发，对 S12 和 S22 分别做 K 拟合，将拟合结果导出为标准 K 表，然后在指定的 r* 点做点评价（margin）或系统扫描（scan）。</p>
+    <p>前置条件：上游插值已完成，<code>analysis/interpolation/...</code> 下的 smooth CSV 已就绪。</p>
+    <div style="margin-top:8px;"><span class="status-partial">核心计算已完成，展示层待补</span></div>
+  </section>
 
-<!-- ── 2. 执行流程 ── -->
-<section>
-  <div class="section-label">执行流程</div>
-  <div class="flow">
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="step-num">1</div>
-        <div class="flow-connector"></div>
-      </div>
-      <div class="flow-body">
-        <div class="step-title">K fitting</div>
-        <div class="step-meta">k_fe_stress_fitting_analysis.py</div>
-        <div class="step-desc">读取插值 CSV，对 S12 / S22 做 K 拟合，生成拟合图和 fit_summary。</div>
-        <div>
-          <span class="tag tag-blue">读取 k_tasks.csv</span>
+  <section>
+    <div class="section-label">执行流程</div>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num">1</div>
+          <div class="flow-connector"></div>
+        </div>
+        <div class="flow-body">
+          <div class="step-title">K fitting</div>
+          <div class="step-meta">k_fe_stress_fitting_analysis.py</div>
+          <div class="step-desc">读取插值 CSV，对 S12 / S22 做 K 拟合，生成拟合图和 fit_summary。</div>
+          <div><span class="tag tag-blue">读取 k_tasks.csv</span></div>
         </div>
       </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="step-num">2</div>
-        <div class="flow-connector"></div>
-      </div>
-      <div class="flow-body">
-        <div class="step-title">导出 K 表</div>
-        <div class="step-meta">export_k_tables.py</div>
-        <div class="step-desc">把 fit_summary 整理成标准 K 表：S12_core_K.csv 和 S22_core_K.csv。下游 margin 和 scan 都从这里读。</div>
-        <div>
-          <span class="tag tag-blue">读取 k_tasks.csv</span>
-          <span class="tag tag-blue">读取 k_stage_params.csv</span>
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num">2</div>
+          <div class="flow-connector"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="step-num" style="background:var(--bg-3);color:var(--text-3);border:1px solid var(--border-2);font-size:11px;">3·4</div>
-      </div>
-      <div class="flow-body" style="padding-bottom: 0;">
-        <div class="step-desc" style="margin-bottom: 10px;">根据 <code>k_stage_params.csv</code> 中的开关，选其一或同时运行：</div>
-        <div class="fork-row">
-          <div class="fork-card">
-            <div class="fork-card-title">rstar_margin（点评价）</div>
-            <div class="fork-card-desc">在几个指定的 r* 值上计算 σ、φ、R_y。适合验证某个工况。</div>
-            <div class="fork-card-script">eval_rstar_and_margin.py</div>
+        <div class="flow-body">
+          <div class="step-title">导出 K 表</div>
+          <div class="step-meta">export_k_tables.py</div>
+          <div class="step-desc">把 fit_summary 整理成标准 K 表：S12_core_K.csv 和 S22_core_K.csv。下游 margin 和 scan 都从这里读。</div>
+          <div>
+            <span class="tag tag-blue">读取 k_tasks.csv</span>
+            <span class="tag tag-blue">读取 k_stage_params.csv</span>
           </div>
-          <div class="fork-card">
-            <div class="fork-card-title">rstar_scan（系统扫描）</div>
-            <div class="fork-card-desc">在一组 r* 上做扫描，输出扫描长表和 ratio 汇总。用于稳定性分析。</div>
-            <div class="fork-card-script">rstar_scan.py</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-left">
+          <div class="step-num" style="background:var(--bg-3);color:var(--text-3);border:1px solid var(--border-2);font-size:10px;">3·4</div>
+        </div>
+        <div class="flow-body" style="padding-bottom:0;">
+          <div class="step-desc" style="margin-bottom:10px;">根据 <code>k_stage_params.csv</code> 中的开关，选其一或同时运行：</div>
+          <div class="fork-grid">
+            <div class="fork-card">
+              <div class="fork-card-title">rstar_margin（点评价）</div>
+              <div class="fork-card-desc">在几个指定的 r* 值上计算 σ、φ、R_y。适合验证某个工况。</div>
+              <div class="fork-card-script">eval_rstar_and_margin.py</div>
+            </div>
+            <div class="fork-card">
+              <div class="fork-card-title">rstar_scan（系统扫描）</div>
+              <div class="fork-card-desc">在一组 r* 上做扫描，输出扫描长表和 ratio 汇总。用于稳定性分析。</div>
+              <div class="fork-card-script">rstar_scan.py</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  </section>
 
-  </div>
-</section>
-
-<!-- ── 3. 配置表 ── -->
-<section>
-  <div class="section-label">配置表</div>
-  <p>两张表通过 <code>task_id</code> 串联。每个任务各填一行。</p>
-
-  <div style="margin-top: 20px;" class="config-block">
-    <div class="config-header">
-      <span class="config-filename">k_tasks.csv</span>
-      <span class="config-desc">— 回答「分析哪个对象」，只有第 1 步读它</span>
+  <section>
+    <div class="section-label">配置表</div>
+    <p>两张表通过 <code>task_id</code> 串联，每个任务各填一行。</p>
+    <div style="margin-top:20px;" class="config-block">
+      <div class="config-header">
+        <span class="config-filename">k_tasks.csv</span>
+        <span class="config-desc">— 回答「分析哪个对象」，只有第 1 步读它</span>
+      </div>
+      <table class="field-table">
+        <thead><tr><th>字段</th><th>说明</th><th style="width:60px;">必填</th></tr></thead>
+        <tbody>
+          <tr><td class="field-name">enabled</td><td>0 = 跳过，1 = 执行</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">task_id</td><td>任务主键，全链唯一。建议带 case 和载荷信息</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">case_name</td><td>定位上游插值结果</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">scope_name</td><td>定位上游插值结果</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">object_name</td><td>定位上游插值结果</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">target_load_N</td><td>目标载荷（N）</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">pair</td><td>legacy 所需语义，下游导出依赖它，不能省</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">data_layer</td><td>插值数据层，默认 smooth</td><td><span class="opt">选填</span></td></tr>
+          <tr><td class="field-name">fit_record_rstar_mm</td><td>fitting 阶段的默认记录点，不是 scan 列表</td><td><span class="opt">选填</span></td></tr>
+          <tr><td class="field-name">notes</td><td>备注</td><td><span class="opt">选填</span></td></tr>
+        </tbody>
+      </table>
     </div>
-    <table class="field-table">
-      <thead><tr><th>字段</th><th>说明</th><th style="width:60px;">必填</th></tr></thead>
-      <tbody>
-        <tr><td class="field-name">enabled</td><td>0 = 跳过，1 = 执行</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">task_id</td><td>任务主键，全链唯一。建议带 case 和载荷信息</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">case_name</td><td>定位上游插值结果</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">scope_name</td><td>定位上游插值结果</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">object_name</td><td>定位上游插值结果</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">target_load_N</td><td>目标载荷（N）</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">pair</td><td>legacy 所需语义，下游导出依赖它，不能省</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">data_layer</td><td>插值数据层，默认 smooth</td><td><span class="opt">选填</span></td></tr>
-        <tr><td class="field-name">fit_record_rstar_mm</td><td>fitting 阶段的默认记录点，不是 scan 列表</td><td><span class="opt">选填</span></td></tr>
-        <tr><td class="field-name">notes</td><td>备注</td><td><span class="opt">选填</span></td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="config-block">
-    <div class="config-header">
-      <span class="config-filename">k_stage_params.csv</span>
-      <span class="config-desc">— 回答「下游阶段是否跑、怎么跑」，第 2～4 步读它</span>
+    <div class="config-block">
+      <div class="config-header">
+        <span class="config-filename">k_stage_params.csv</span>
+        <span class="config-desc">— 回答「下游阶段是否跑、怎么跑」，第 2～4 步读它</span>
+      </div>
+      <table class="field-table">
+        <thead><tr><th>字段</th><th>说明</th><th style="width:60px;">必填</th></tr></thead>
+        <tbody>
+          <tr><td class="field-name">task_id</td><td>与 k_tasks.csv 的 task_id 对应</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">enable_export_coretable</td><td>是否导出 K 表（0/1）</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">enable_rstar_margin</td><td>是否跑点评价（0/1）</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">enable_rstar_scan</td><td>是否跑扫描（0/1）</td><td><span class="req">必填</span></td></tr>
+          <tr><td class="field-name">margin_rstars_mm</td><td>margin 的评价点，可填多个逗号分隔</td><td><span class="req">必填*</span></td></tr>
+          <tr><td class="field-name">margin_lambda2</td><td>二项指数，通常 0.9999</td><td><span class="req">必填*</span></td></tr>
+          <tr><td class="field-name">scan_rstars_mm</td><td>扫描点列表，逗号分隔，建议覆盖多个量级</td><td><span class="req">必填*</span></td></tr>
+          <tr><td class="field-name">scan_lambda2</td><td>二项指数，通常 0.9999</td><td><span class="req">必填*</span></td></tr>
+          <tr><td class="field-name">margin_yield_csv</td><td>可选屈服映射文件</td><td><span class="opt">选填</span></td></tr>
+          <tr><td class="field-name">scan_yield_csv</td><td>可选屈服映射文件</td><td><span class="opt">选填</span></td></tr>
+        </tbody>
+      </table>
+      <div class="note">* 对应阶段 enable=1 时必填，enable=0 时可留空。</div>
     </div>
-    <table class="field-table">
-      <thead><tr><th>字段</th><th>说明</th><th style="width:60px;">必填</th></tr></thead>
-      <tbody>
-        <tr><td class="field-name">task_id</td><td>与 k_tasks.csv 的 task_id 对应</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">enable_export_coretable</td><td>是否导出 K 表（0/1）</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">enable_rstar_margin</td><td>是否跑点评价（0/1）</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">enable_rstar_scan</td><td>是否跑扫描（0/1）</td><td><span class="req">必填</span></td></tr>
-        <tr><td class="field-name">margin_rstars_mm</td><td>margin 的评价点，可填多个逗号分隔</td><td><span class="req">必填*</span></td></tr>
-        <tr><td class="field-name">margin_lambda2</td><td>二项指数，通常 0.9999</td><td><span class="req">必填*</span></td></tr>
-        <tr><td class="field-name">scan_rstars_mm</td><td>扫描点列表，逗号分隔，建议覆盖多个量级</td><td><span class="req">必填*</span></td></tr>
-        <tr><td class="field-name">scan_lambda2</td><td>二项指数，通常 0.9999</td><td><span class="req">必填*</span></td></tr>
-        <tr><td class="field-name">margin_yield_csv</td><td>可选屈服映射文件</td><td><span class="opt">选填</span></td></tr>
-        <tr><td class="field-name">scan_yield_csv</td><td>可选屈服映射文件</td><td><span class="opt">选填</span></td></tr>
-      </tbody>
-    </table>
-    <div class="note">* 对应阶段 enable=1 时必填，enable=0 时可留空。</div>
-  </div>
-</section>
+  </section>
 
-<!-- ── 4. 新建任务操作 ── -->
-<section>
-  <div class="section-label">新建任务：操作步骤</div>
-
-  <div class="ops">
-
-    <div class="op-card">
-      <div class="op-header">
-        <div class="op-num">1</div>
-        <div class="op-title">在 k_tasks.csv 添加一行</div>
-        <div class="op-file">config/analysis/k/k_tasks.csv</div>
+  <section>
+    <div class="section-label">新建任务：操作步骤</div>
+    <div class="ops">
+      <div class="op-card">
+        <div class="op-header">
+          <div class="op-num">1</div>
+          <div class="op-title">在 k_tasks.csv 添加一行</div>
+          <div class="op-file">config/analysis/k/k_tasks.csv</div>
+        </div>
+        <div class="op-body">
+          <table class="example-table">
+            <thead><tr><th>字段</th><th>填入值</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">enabled</td><td class="val">1</td></tr>
+              <tr><td class="field-name">task_id</td><td class="val">K_G1_A1_0_A1_upper_3000N</td></tr>
+              <tr><td class="field-name">case_name</td><td class="val">G1_A1_0_A1_node</td></tr>
+              <tr><td class="field-name">scope_name</td><td class="val">local_end</td></tr>
+              <tr><td class="field-name">object_name</td><td class="val">adhesive_upper_end</td></tr>
+              <tr><td class="field-name">data_layer</td><td class="val">smooth</td></tr>
+              <tr><td class="field-name">target_load_N</td><td class="val">3000</td></tr>
+              <tr><td class="field-name">pair</td><td class="val">Group_Per10 <span class="val-note">不能省</span></td></tr>
+              <tr><td class="field-name">fit_record_rstar_mm</td><td class="val">0.0001 <span class="val-note">fitting 记录点，不是 scan 列表</span></td></tr>
+            </tbody>
+          </table>
+          <div class="note">不要在这张表里写 rstars_mm，任何阶段参数都属于 k_stage_params.csv。</div>
+        </div>
       </div>
-      <div class="op-body">
-        <table class="example-table">
-          <thead><tr><th>字段</th><th>填入值</th></tr></thead>
-          <tbody>
-            <tr><td class="field-name">enabled</td><td class="val">1</td></tr>
-            <tr><td class="field-name">task_id</td><td class="val">K_G1_A1_0_A1_upper_3000N</td></tr>
-            <tr><td class="field-name">case_name</td><td class="val">G1_A1_0_A1_node</td></tr>
-            <tr><td class="field-name">scope_name</td><td class="val">local_end</td></tr>
-            <tr><td class="field-name">object_name</td><td class="val">adhesive_upper_end</td></tr>
-            <tr><td class="field-name">data_layer</td><td class="val">smooth</td></tr>
-            <tr><td class="field-name">target_load_N</td><td class="val">3000</td></tr>
-            <tr><td class="field-name">pair</td><td class="val">Group_Per10 <span class="val-note">不能省</span></td></tr>
-            <tr><td class="field-name">fit_record_rstar_mm</td><td class="val">0.0001 <span class="val-note">fitting 记录点，不是 scan 列表</span></td></tr>
-          </tbody>
-        </table>
-        <div class="note">不要在这张表里写 rstars_mm，任何阶段参数都属于 k_stage_params.csv。</div>
+      <div class="op-card">
+        <div class="op-header">
+          <div class="op-num">2</div>
+          <div class="op-title">在 k_stage_params.csv 添加一行</div>
+          <div class="op-file">config/analysis/k/k_stage_params.csv</div>
+        </div>
+        <div class="op-body">
+          <table class="example-table">
+            <thead><tr><th>字段</th><th>填入值</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">task_id</td><td class="val">K_G1_A1_0_A1_upper_3000N</td></tr>
+              <tr class="group-row"><td colspan="2" class="group-label">阶段开关</td></tr>
+              <tr><td class="field-name">enable_export_coretable</td><td class="val">1</td></tr>
+              <tr><td class="field-name">enable_rstar_margin</td><td class="val">1</td></tr>
+              <tr><td class="field-name">enable_rstar_scan</td><td class="val">1</td></tr>
+              <tr class="group-row"><td colspan="2" class="group-label">margin 参数</td></tr>
+              <tr><td class="field-name">margin_rstars_mm</td><td class="val">1e-4</td></tr>
+              <tr><td class="field-name">margin_lambda2</td><td class="val">0.9999</td></tr>
+              <tr class="group-row"><td colspan="2" class="group-label">scan 参数</td></tr>
+              <tr><td class="field-name">scan_rstars_mm</td><td class="val">1e-05, 2e-05, 5e-05, 1e-04 <span class="val-note">建议覆盖多个量级</span></td></tr>
+              <tr><td class="field-name">scan_lambda2</td><td class="val">0.9999</td></tr>
+            </tbody>
+          </table>
+          <div class="note">开关设为 0 时对应阶段会被跳过，不需要删行。</div>
+        </div>
       </div>
-    </div>
-
-    <div class="op-card">
-      <div class="op-header">
-        <div class="op-num">2</div>
-        <div class="op-title">在 k_stage_params.csv 添加一行</div>
-        <div class="op-file">config/analysis/k/k_stage_params.csv</div>
-      </div>
-      <div class="op-body">
-        <table class="example-table">
-          <thead><tr><th>字段</th><th>填入值</th></tr></thead>
-          <tbody>
-            <tr><td class="field-name">task_id</td><td class="val">K_G1_A1_0_A1_upper_3000N</td></tr>
-            <tr class="group-row"><td colspan="2" class="group-label">阶段开关</td></tr>
-            <tr><td class="field-name">enable_export_coretable</td><td class="val">1</td></tr>
-            <tr><td class="field-name">enable_rstar_margin</td><td class="val">1</td></tr>
-            <tr><td class="field-name">enable_rstar_scan</td><td class="val">1</td></tr>
-            <tr class="group-row"><td colspan="2" class="group-label">margin 参数</td></tr>
-            <tr><td class="field-name">margin_rstars_mm</td><td class="val">1e-4</td></tr>
-            <tr><td class="field-name">margin_lambda2</td><td class="val">0.9999</td></tr>
-            <tr class="group-row"><td colspan="2" class="group-label">scan 参数</td></tr>
-            <tr><td class="field-name">scan_rstars_mm</td><td class="val">1e-05, 2e-05, 5e-05, 1e-04 <span class="val-note">建议覆盖多个量级</span></td></tr>
-            <tr><td class="field-name">scan_lambda2</td><td class="val">0.9999</td></tr>
-          </tbody>
-        </table>
-        <div class="note">开关设为 0 时对应阶段会被跳过，不需要删行。</div>
-      </div>
-    </div>
-
-    <div class="op-card">
-      <div class="op-header">
-        <div class="op-num">3</div>
-        <div class="op-title">按顺序运行脚本</div>
-        <div class="op-file">scripts/analysis/k/</div>
-      </div>
-      <div class="op-body">
-        <pre># 步骤 1：K fitting
+      <div class="op-card">
+        <div class="op-header">
+          <div class="op-num">3</div>
+          <div class="op-title">按顺序运行脚本</div>
+          <div class="op-file">scripts/analysis/k/</div>
+        </div>
+        <div class="op-body">
+          <pre># 步骤 1：K fitting
 python scripts/analysis/k/k_fe_stress_fitting_analysis.py
 
 # 步骤 2：导出 K 表
@@ -562,96 +288,86 @@ python scripts/analysis/k/eval_rstar_and_margin.py
 
 # 步骤 3b：rstar 扫描（enable=1 时运行）
 python scripts/analysis/k/rstar_scan.py</pre>
-        <p style="margin-top:10px;">脚本自动读配置表，<code>enabled=0</code> 的任务会被跳过。步骤 3a 和 3b 可以同时运行，互不依赖。</p>
+          <p style="margin-top:10px;color:var(--text-2);font-size:14px;">脚本自动读配置表，<code>enabled=0</code> 的任务会被跳过。步骤 3a 和 3b 可以同时运行，互不依赖。</p>
+        </div>
       </div>
     </div>
+  </section>
 
-  </div>
-</section>
+  <section>
+    <div class="section-label">输入 / 输出</div>
+    <div class="io-grid">
+      <div class="io-box">
+        <div class="io-label">上游输入</div>
+        <span class="io-path">analysis/interpolation/&lt;case&gt;/&lt;scope&gt;/&lt;object&gt;/smooth/Frame_*/</span>
+        <div style="font-size:13px;color:var(--text-3);margin-top:6px;">默认读取 smooth 层，可通过 data_layer 字段改为 raw</div>
+      </div>
+      <div class="io-box">
+        <div class="io-label">① fitting 输出</div>
+        <span class="io-path">analysis/k/fitting/outputs/&lt;task_id&gt;/&lt;task_id&gt;_fit_summary.csv</span>
+        <span class="io-path">analysis/k/fitting/plots/&lt;task_id&gt;/</span>
+      </div>
+      <div class="io-box">
+        <div class="io-label">② K 表输出</div>
+        <span class="io-path">analysis/k/tables/exports/&lt;task_id&gt;/S12_core_K.csv</span>
+        <span class="io-path">analysis/k/tables/exports/&lt;task_id&gt;/S22_core_K.csv</span>
+        <span class="io-path">analysis/k/tables/all_exports/S12_core_K_all.csv</span>
+      </div>
+      <div class="io-box">
+        <div class="io-label">③④ 评价 / 扫描输出</div>
+        <span class="io-path">analysis/k/rstar_margin/outputs/&lt;task_id&gt;/</span>
+        <span class="io-path">analysis/k/rstar_scan/outputs/&lt;task_id&gt;/_ratios/</span>
+      </div>
+    </div>
+  </section>
 
-<!-- ── 5. 输出路径 ── -->
-<section>
-  <div class="section-label">输出路径</div>
-  <table class="out-table">
-    <thead><tr><th>阶段</th><th>输出路径</th></tr></thead>
-    <tbody>
-      <tr>
-        <td class="stage-name">① fitting 结果</td>
-        <td><span class="out-path">analysis/k/fitting/outputs/&lt;task_id&gt;/&lt;task_id&gt;_fit_summary.csv</span></td>
-      </tr>
-      <tr>
-        <td class="stage-name">① fitting 图</td>
-        <td><span class="out-path">analysis/k/fitting/plots/&lt;task_id&gt;/</span></td>
-      </tr>
-      <tr>
-        <td class="stage-name">② K 表（单任务）</td>
-        <td><span class="out-path">analysis/k/tables/exports/&lt;task_id&gt;/S12_core_K.csv<br>analysis/k/tables/exports/&lt;task_id&gt;/S22_core_K.csv</span></td>
-      </tr>
-      <tr>
-        <td class="stage-name">② K 表（汇总）</td>
-        <td><span class="out-path">analysis/k/tables/all_exports/S12_core_K_all.csv</span></td>
-      </tr>
-      <tr>
-        <td class="stage-name">③ margin 输出</td>
-        <td><span class="out-path">analysis/k/rstar_margin/outputs/&lt;task_id&gt;/</span></td>
-      </tr>
-      <tr>
-        <td class="stage-name">④ scan 输出</td>
-        <td><span class="out-path">analysis/k/rstar_scan/outputs/&lt;task_id&gt;/</span></td>
-      </tr>
-    </tbody>
-  </table>
-</section>
+  <section>
+    <div class="section-label">常见配置错误</div>
+    <div class="pitfall-list">
+      <div class="pitfall">
+        <div class="pitfall-icon">!</div>
+        <div>
+          <div class="pitfall-text"><code>rstars_mm</code> 写进了 k_tasks.csv</div>
+          <div class="pitfall-fix">rstars_mm 只属于 k_stage_params.csv，k_tasks.csv 不放任何阶段参数</div>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">!</div>
+        <div>
+          <div class="pitfall-text"><code>pair</code> 字段留空</div>
+          <div class="pitfall-fix">下游导出依赖 pair 恢复 legacy 语义，必填，不能省</div>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">!</div>
+        <div>
+          <div class="pitfall-text">k_stage_params.csv 里没有对应 task_id 的行</div>
+          <div class="pitfall-fix">② ③ ④ 不会执行，需补一行，开关置 0 的阶段会自动跳过</div>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">!</div>
+        <div>
+          <div class="pitfall-text">fitting 没跑就直接跑 export</div>
+          <div class="pitfall-fix">fit_summary.csv 不存在会报错，四个步骤必须顺序执行</div>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">!</div>
+        <div>
+          <div class="pitfall-text">scan_rstars_mm 只写了一个值</div>
+          <div class="pitfall-fix">扫描只有单点时 ratio 列会全为空，建议覆盖至少 3～4 个量级</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<!-- ── 6. 常见错误 ── -->
-<section>
-  <div class="section-label">常见配置错误</div>
-  <div class="pitfall-list">
-    <div class="pitfall">
-      <div class="pitfall-icon">!</div>
-      <div>
-        <div class="pitfall-text"><code>rstars_mm</code> 写进了 k_tasks.csv</div>
-        <div class="pitfall-fix">rstars_mm 只属于 k_stage_params.csv，k_tasks.csv 不放任何阶段参数</div>
-      </div>
-    </div>
-    <div class="pitfall">
-      <div class="pitfall-icon">!</div>
-      <div>
-        <div class="pitfall-text"><code>pair</code> 字段留空</div>
-        <div class="pitfall-fix">下游导出依赖 pair 恢复 legacy 语义，必填，不能省</div>
-      </div>
-    </div>
-    <div class="pitfall">
-      <div class="pitfall-icon">!</div>
-      <div>
-        <div class="pitfall-text">k_stage_params.csv 里没有对应 task_id 的行</div>
-        <div class="pitfall-fix">② ③ ④ 不会执行，需补一行，开关置 0 的阶段会自动跳过</div>
-      </div>
-    </div>
-    <div class="pitfall">
-      <div class="pitfall-icon">!</div>
-      <div>
-        <div class="pitfall-text">fitting 没跑就直接跑 export</div>
-        <div class="pitfall-fix">fit_summary.csv 不存在会报错，四个步骤必须顺序执行</div>
-      </div>
-    </div>
-    <div class="pitfall">
-      <div class="pitfall-icon">!</div>
-      <div>
-        <div class="pitfall-text">scan_rstars_mm 只写了一个值</div>
-        <div class="pitfall-fix">扫描只有单点时 ratio 列会全为空，建议覆盖至少 3～4 个量级</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── 7. 当前限制 ── -->
-<section style="margin-bottom: 0;">
-  <div class="section-label">当前已知限制</div>
-  <p>K fitting 新链已完成单案例验证，批量案例覆盖仍在进行中。</p>
-  <p>rstar_scan 当前单案例只有 A1，部分 legacy ratio 比较列会为空，这是数据范围问题，不是配置错误。</p>
-  <p>export_k_tables 核心列和单案例导出已恢复，legacy 多组批量语义还未全部验证。</p>
-</section>
+  <section style="margin-bottom:0;">
+    <div class="section-label">当前已知限制</div>
+    <p>K fitting 新链已完成单案例验证，批量案例覆盖仍在进行中。</p>
+    <p>rstar_scan 当前单案例只有 A1，部分 legacy ratio 比较列会为空，这是数据范围问题，不是配置错误。</p>
+    <p>export_k_tables 核心列和单案例导出已恢复，legacy 多组批量语义还未全部验证。</p>
+  </section>
 
 </main>
 </body>
